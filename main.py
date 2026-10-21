@@ -1,154 +1,165 @@
-class Node:
-    def __init__(self, data):
-        self.data = data
-        self.prev = None
-        self.next = None
+class DialMark:
+    def __init__(self, value):
+        self.value = value
+        self.before = None
+        self.after = None
 
 
-class CircularDoublyLinkedList:
+class Dial:
     def __init__(self):
-        self.head = None
+        self.origin = None
         self.size = 0
 
-    def insert_at_beginning(self, data):
-        new_node = Node(data)
-        if self.head is None:
-            self.head = new_node
-            new_node.next = self.head
-            new_node.prev = self.head
+    def place_first(self, value):
+        new_mark = DialMark(value)
+        if self.origin is None:
+            self.origin = new_mark
+            new_mark.after = self.origin
+            new_mark.before = self.origin
         else:
-            last = self.head.prev
-            new_node.next = self.head
-            self.head.prev = new_node
-            new_node.prev = last
-            last.next = new_node
-            self.head = new_node
+            last_mark = self.origin.before
+            new_mark.after = self.origin
+            self.origin.before = new_mark
+            new_mark.before = last_mark
+            last_mark.after = new_mark
+            self.origin = new_mark
         self.size += 1
-        return new_node
+        return new_mark
 
-    def insert_at_end(self, data):
-        new_node = Node(data)
-        if self.head is None:
-            self.head = new_node
-            new_node.next = self.head
-            new_node.prev = self.head
+    def place_last(self, value):
+        new_mark = DialMark(value)
+        if self.origin is None:
+            self.origin = new_mark
+            new_mark.after = self.origin
+            new_mark.before = self.origin
         else:
-            last = self.head.prev
-            last.next = new_node
-            new_node.next = self.head
-            new_node.prev = last
-            self.head.prev = new_node
+            last_mark = self.origin.before
+            last_mark.after = new_mark
+            new_mark.after = self.origin
+            new_mark.before = last_mark
+            self.origin.before = new_mark
         self.size += 1
-        return new_node
+        return new_mark
 
-    def delete(self, data):
-        node = self.find_node(lambda value: value is data)
-        if node is None:
+    def place_before(self, mark, value):
+        if mark is self.origin:
+            return self.place_first(value)
+        new_mark = DialMark(value)
+        new_mark.before = mark.before
+        new_mark.after = mark
+        mark.before.after = new_mark
+        mark.before = new_mark
+        self.size += 1
+        return new_mark
+
+    def remove(self, value):
+        mark = self.locate(lambda item: item is value)
+        if mark is None:
             return False
-        self.remove_node(node)
+        self.detach(mark)
         return True
 
-    def remove_node(self, node):
-        if node.next is node:
-            self.head = None
+    def detach(self, mark):
+        if mark.after is mark:
+            self.origin = None
         else:
-            node.prev.next = node.next
-            node.next.prev = node.prev
-            if node is self.head:
-                self.head = node.next
-        node.next = None
-        node.prev = None
+            mark.before.after = mark.after
+            mark.after.before = mark.before
+            if mark is self.origin:
+                self.origin = mark.after
+        mark.after = None
+        mark.before = None
         self.size -= 1
 
-    def find_node(self, predicate):
-        current = self.head
+    def locate(self, condition):
+        current = self.origin
         if current is None:
             return None
         while True:
-            if predicate(current.data):
+            if condition(current.value):
                 return current
-            current = current.next
-            if current is self.head:
+            current = current.after
+            if current is self.origin:
                 return None
 
-    def nodes(self):
-        current = self.head
+    def marks(self):
+        current = self.origin
         if current is None:
             return
         while True:
             yield current
-            current = current.next
-            if current is self.head:
+            current = current.after
+            if current is self.origin:
                 break
 
-    def nodes_backward(self):
-        if self.head is None:
+    def marks_backward(self):
+        if self.origin is None:
             return
-        current = self.head.prev
+        current = self.origin.before
         while True:
             yield current
-            if current is self.head:
+            if current is self.origin:
                 break
-            current = current.prev
+            current = current.before
 
     def values(self):
-        return [node.data for node in self.nodes()]
+        return [mark.value for mark in self.marks()]
 
     def clear(self):
-        self.head = None
+        self.origin = None
         self.size = 0
 
     def is_empty(self):
-        return self.head is None
+        return self.origin is None
 
     def __len__(self):
         return self.size
 
 
-class RingCursor:
-    def __init__(self, ring):
-        self.ring = ring
-        self.node = ring.head
+class DialHand:
+    def __init__(self, dial):
+        self.dial = dial
+        self.mark = dial.origin
         self.steps = 0
 
     @property
     def value(self):
-        return self.node.data
+        return self.mark.value
 
-    def forward(self):
-        self.node = self.node.next
+    def advance(self):
+        self.mark = self.mark.after
         self.steps += 1
-        return self.node is self.ring.head
+        return self.mark is self.dial.origin
 
-    def backward(self):
-        wrapped = self.node is self.ring.head
-        self.node = self.node.prev
+    def retreat(self):
+        wrapped = self.mark is self.dial.origin
+        self.mark = self.mark.before
         self.steps += 1
         return wrapped
 
-    def move_to(self, value):
-        node = self.ring.find_node(lambda data: data == value)
-        if node is not None:
-            self.node = node
+    def point_to(self, value):
+        mark = self.dial.locate(lambda item: item == value)
+        if mark is not None:
+            self.mark = mark
 
     def reset(self):
-        self.node = self.ring.head
+        self.mark = self.dial.origin
 
 
-class RingFactory:
+class DialFactory:
     @staticmethod
     def numbers(start, end):
-        ring = CircularDoublyLinkedList()
+        dial = Dial()
         for value in range(start, end + 1):
-            ring.insert_at_end(value)
-        return ring
+            dial.place_last(value)
+        return dial
 
     @staticmethod
     def items(values):
-        ring = CircularDoublyLinkedList()
+        dial = Dial()
         for value in values:
-            ring.insert_at_end(value)
-        return ring
+            dial.place_last(value)
+        return dial
 
 
 class RuntimeBridge:
@@ -277,7 +288,7 @@ class Theme:
 
 class ThemeCatalog:
     def __init__(self):
-        self.ring = RingFactory.items([
+        self.dial = DialFactory.items([
             Theme("Medianoche", "#0b1020", "#141b2f", "#1d2742", "#2a3556", "#e8ecf8", "#8c96b5",
                   "#b45ad6", "#4f8cff", "#3ecf8e", "#ff5d6c", "#101731", "#e8ecf8", "#ff7a45"),
             Theme("Claro", "#eef2f9", "#ffffff", "#f3f5fb", "#d9dfee", "#1f2a5c", "#6b7699",
@@ -289,17 +300,17 @@ class ThemeCatalog:
             Theme("Bosque", "#0c1510", "#132219", "#1a3022", "#26442f", "#e7f5ea", "#88a891",
                   "#7bd88f", "#d4b45a", "#5fd3a4", "#ef6b6b", "#0f1c14", "#e7f5ea", "#ff9f43"),
         ])
-        self.cursor = RingCursor(self.ring)
+        self.hand = DialHand(self.dial)
 
     @property
     def current(self):
-        return self.cursor.value
+        return self.hand.value
 
-    def next(self):
-        self.cursor.forward()
+    def following(self):
+        self.hand.advance()
 
-    def previous(self):
-        self.cursor.backward()
+    def preceding(self):
+        self.hand.retreat()
 
 
 class TimeProvider:
@@ -324,25 +335,25 @@ class TimeProvider:
 
 class ClockMechanism:
     def __init__(self):
-        self.hours = RingCursor(RingFactory.numbers(0, 23))
-        self.minutes = RingCursor(RingFactory.numbers(0, 59))
-        self.seconds = RingCursor(RingFactory.numbers(0, 59))
+        self.hours = DialHand(DialFactory.numbers(0, 23))
+        self.minutes = DialHand(DialFactory.numbers(0, 59))
+        self.seconds = DialHand(DialFactory.numbers(0, 59))
         self.started = False
         self.ticks = 0
 
     def tick(self):
         self.ticks += 1
-        if self.seconds.forward():
-            if self.minutes.forward():
-                self.hours.forward()
+        if self.seconds.advance():
+            if self.minutes.advance():
+                self.hours.advance()
 
     def state(self):
         return self.hours.value, self.minutes.value, self.seconds.value
 
     def jump(self, hour, minute, second):
-        self.hours.move_to(hour)
-        self.minutes.move_to(minute)
-        self.seconds.move_to(second)
+        self.hours.point_to(hour)
+        self.minutes.point_to(minute)
+        self.seconds.point_to(second)
 
     def sync(self, hour, minute, second):
         target = (hour, minute, second)
@@ -367,7 +378,7 @@ class City:
 
 class WorldClock:
     def __init__(self):
-        self.ring = RingFactory.items([
+        self.dial = DialFactory.items([
             City("Bogotá", "Colombia", -5),
             City("Ciudad de México", "México", -6),
             City("Lima", "Perú", -5),
@@ -381,11 +392,11 @@ class WorldClock:
             City("Tokio", "Japón", 9),
             City("Honolulu", "Estados Unidos", -10),
         ])
-        self.cursor = RingCursor(self.ring)
+        self.hand = DialHand(self.dial)
 
     @property
     def current(self):
-        return self.cursor.value
+        return self.hand.value
 
 
 class Alarm:
@@ -400,29 +411,22 @@ class Alarm:
 
 class AlarmManager:
     def __init__(self, storage_path):
-        self.ring = CircularDoublyLinkedList()
+        self.dial = Dial()
         self.storage_path = storage_path
         self.load()
 
     def add(self, hour, minute, label, one_shot=False):
         alarm = Alarm(hour, minute, label or "Alarma", True, one_shot)
-        node = self.ring.find_node(lambda item: (item.hour, item.minute) > (hour, minute))
-        if node is None:
-            self.ring.insert_at_end(alarm)
-        elif node is self.ring.head:
-            self.ring.insert_at_beginning(alarm)
+        mark = self.dial.locate(lambda item: (item.hour, item.minute) > (hour, minute))
+        if mark is None:
+            self.dial.place_last(alarm)
         else:
-            new_node = Node(alarm)
-            new_node.prev = node.prev
-            new_node.next = node
-            node.prev.next = new_node
-            node.prev = new_node
-            self.ring.size += 1
+            self.dial.place_before(mark, alarm)
         self.save()
         return alarm
 
     def remove(self, alarm):
-        self.ring.delete(alarm)
+        self.dial.remove(alarm)
         self.save()
 
     def toggle(self, alarm):
@@ -432,13 +436,13 @@ class AlarmManager:
     def due(self, moment):
         key = (moment.tm_yday, moment.tm_hour, moment.tm_min)
         fired = []
-        for alarm in self.ring.values():
+        for alarm in self.dial.values():
             if alarm.active and alarm.hour == moment.tm_hour and alarm.minute == moment.tm_min and alarm.last_fired != key:
                 alarm.last_fired = key
                 fired.append(alarm)
         for alarm in fired:
             if alarm.one_shot:
-                self.ring.delete(alarm)
+                self.dial.remove(alarm)
         if fired:
             self.save()
         return fired
@@ -447,7 +451,7 @@ class AlarmManager:
         now_minutes = moment.tm_hour * 60 + moment.tm_min
         best = None
         best_distance = None
-        for alarm in self.ring.values():
+        for alarm in self.dial.values():
             if not alarm.active:
                 continue
             distance = (alarm.hour * 60 + alarm.minute - now_minutes) % 1440
@@ -461,7 +465,7 @@ class AlarmManager:
     def save(self):
         try:
             with open(self.storage_path, "w", encoding="utf-8") as file:
-                for alarm in self.ring.values():
+                for alarm in self.dial.values():
                     if not alarm.one_shot:
                         label = alarm.label.replace(";", ",")
                         file.write(f"{alarm.hour};{alarm.minute};{label};{int(alarm.active)}\n")
@@ -478,7 +482,7 @@ class AlarmManager:
             parts = line.split(";")
             if len(parts) == 4 and parts[0].isdigit() and parts[1].isdigit():
                 alarm = Alarm(int(parts[0]), int(parts[1]), parts[2], parts[3] == "1")
-                self.ring.insert_at_end(alarm)
+                self.dial.place_last(alarm)
 
 
 class Lap:
@@ -494,7 +498,7 @@ class Stopwatch:
         self.running = False
         self.accumulated = 0.0
         self.started_at = 0.0
-        self.laps = CircularDoublyLinkedList()
+        self.laps = Dial()
 
     def elapsed(self):
         if self.running:
@@ -513,8 +517,8 @@ class Stopwatch:
         total = self.elapsed()
         if total <= 0:
             return
-        previous_total = self.laps.head.prev.data.total if self.laps.head else 0.0
-        self.laps.insert_at_end(Lap(len(self.laps) + 1, total - previous_total, total))
+        previous_total = self.laps.origin.before.value.total if self.laps.origin else 0.0
+        self.laps.place_last(Lap(len(self.laps) + 1, total - previous_total, total))
 
     def reset(self):
         self.running = False
@@ -533,9 +537,9 @@ class Stopwatch:
 class CountdownTimer:
     def __init__(self, provider):
         self.provider = provider
-        self.hours = RingCursor(RingFactory.numbers(0, 23))
-        self.minutes = RingCursor(RingFactory.numbers(0, 59))
-        self.seconds = RingCursor(RingFactory.numbers(0, 59))
+        self.hours = DialHand(DialFactory.numbers(0, 23))
+        self.minutes = DialHand(DialFactory.numbers(0, 59))
+        self.seconds = DialHand(DialFactory.numbers(0, 59))
         self.total = 0
         self.running = False
         self.next_tick = 0.0
@@ -543,9 +547,9 @@ class CountdownTimer:
 
     def set_duration(self, hours, minutes, seconds):
         self.running = False
-        self.hours.move_to(hours)
-        self.minutes.move_to(minutes)
-        self.seconds.move_to(seconds)
+        self.hours.point_to(hours)
+        self.minutes.point_to(minutes)
+        self.seconds.point_to(seconds)
         self.total = hours * 3600 + minutes * 60 + seconds
 
     def remaining(self):
@@ -555,9 +559,9 @@ class CountdownTimer:
         return self.remaining() == 0
 
     def tick_backward(self):
-        if self.seconds.backward():
-            if self.minutes.backward():
-                self.hours.backward()
+        if self.seconds.retreat():
+            if self.minutes.retreat():
+                self.hours.retreat()
 
     def toggle(self):
         if self.running:
@@ -759,20 +763,20 @@ class ClockView(View):
         self.ui.label(info, "Próxima alarma", 10, "bold", self.theme.muted).pack(anchor="w", padx=22, pady=(14, 0))
         self.alarm_label = self.ui.label(info, "", 13, "bold", wraplength=290, justify="left")
         self.alarm_label.pack(anchor="w", padx=22, pady=(2, 14))
-        rings = self.ui.card(right)
-        rings.pack(fill="x")
-        self.ui.label(rings, "Cursores en las listas circulares", 10, "bold", self.theme.muted).pack(
+        dials = self.ui.card(right)
+        dials.pack(fill="x")
+        self.ui.label(dials, "Manecillas sobre las listas circulares", 10, "bold", self.theme.muted).pack(
             anchor="w", padx=22, pady=(14, 6))
-        self.ring_labels = []
+        self.dial_labels = []
         for name in ("Horas", "Minutos", "Segundos"):
-            row = self.ui.frame(rings, self.theme.surface)
+            row = self.ui.frame(dials, self.theme.surface)
             row.pack(fill="x", padx=22, pady=3)
             self.ui.label(row, name, 11, "bold", width=9, anchor="w").pack(side="left")
             value = self.ui.label(row, "", 12, color=self.theme.text)
             value.configure(font=Fonts.digits(12))
             value.pack(side="left")
-            self.ring_labels.append(value)
-        self.ui.label(rings, "anterior  ←  actual  →  siguiente", 9, color=self.theme.muted).pack(
+            self.dial_labels.append(value)
+        self.ui.label(dials, "anterior  ←  actual  →  siguiente", 9, color=self.theme.muted).pack(
             anchor="w", padx=22, pady=(6, 14))
 
     def on_second(self, moment):
@@ -791,9 +795,9 @@ class ClockView(View):
             self.alarm_label.configure(text=f"{when} {period}  ·  {alarm.label}\nSuena en {hours} h {minutes} min",
                                        fg=self.theme.text)
         mechanism = self.app.mechanism
-        for label, cursor in zip(self.ring_labels, (mechanism.hours, mechanism.minutes, mechanism.seconds)):
-            node = cursor.node
-            label.configure(text=f"{node.prev.data:02d}  ←  [{node.data:02d}]  →  {node.next.data:02d}")
+        for label, hand in zip(self.dial_labels, (mechanism.hours, mechanism.minutes, mechanism.seconds)):
+            mark = hand.mark
+            label.configure(text=f"{mark.before.value:02d}  ←  [{mark.value:02d}]  →  {mark.after.value:02d}")
 
     def on_frame(self, moment, fraction):
         self.canvas.delete("all")
@@ -811,8 +815,8 @@ class WorldView(View):
         top.pack(fill="x")
         navigation = self.ui.frame(top, self.theme.surface)
         navigation.pack(fill="x", padx=20, pady=20)
-        self.ui.button(navigation, "◀  Anterior", self.previous, "secondary").pack(side="left")
-        self.ui.button(navigation, "Siguiente  ▶", self.next, "secondary").pack(side="right")
+        self.ui.button(navigation, "◀  Anterior", self.show_previous, "secondary").pack(side="left")
+        self.ui.button(navigation, "Siguiente  ▶", self.show_next, "secondary").pack(side="right")
         center = self.ui.frame(navigation, self.theme.surface)
         center.pack(side="left", expand=True)
         self.canvas = self.ui.canvas(center, 180, 180)
@@ -831,7 +835,7 @@ class WorldView(View):
         self.grid = self.ui.frame(self.parent)
         self.grid.pack(fill="both", expand=True, pady=(14, 0))
         self.tiles = []
-        for index, city in enumerate(self.app.world.ring.values()):
+        for index, city in enumerate(self.app.world.dial.values()):
             tile = self.ui.card(self.grid)
             tile.grid(row=index // 4, column=index % 4, sticky="nsew", padx=5, pady=5)
             tile.configure(cursor="hand2")
@@ -848,16 +852,16 @@ class WorldView(View):
         for column in range(4):
             self.grid.columnconfigure(column, weight=1)
 
-    def previous(self):
-        self.app.world.cursor.backward()
+    def show_previous(self):
+        self.app.world.hand.retreat()
         self.refresh()
 
-    def next(self):
-        self.app.world.cursor.forward()
+    def show_next(self):
+        self.app.world.hand.advance()
         self.refresh()
 
     def select(self, city):
-        self.app.world.cursor.move_to(city)
+        self.app.world.hand.point_to(city)
         self.refresh()
 
     def refresh(self):
@@ -966,7 +970,7 @@ class AlarmView(View):
             child.destroy()
         header = self.ui.frame(self.list_card, self.theme.surface)
         header.pack(fill="x", padx=20, pady=(16, 8))
-        total = len(self.app.alarms.ring)
+        total = len(self.app.alarms.dial)
         self.ui.label(header, f"Mis alarmas ({total})", 13, "bold").pack(side="left")
         self.ui.label(header, "Ordenadas por hora · cada una es un nodo de la lista", 10,
                       color=self.theme.muted).pack(side="right")
@@ -974,7 +978,7 @@ class AlarmView(View):
             self.ui.label(self.list_card, "Todavía no tienes alarmas. Crea la primera arriba.", 12,
                           color=self.theme.muted).pack(pady=40)
             return
-        for alarm in self.app.alarms.ring.values():
+        for alarm in self.app.alarms.dial.values():
             row = self.tk_row()
             settings = self.app.settings
             when = TimeFormatter.clock(alarm.hour, alarm.minute, 0, settings.use_24h, False)
@@ -1047,17 +1051,17 @@ class StopwatchView(View):
         header = self.ui.frame(self.laps_card, self.theme.surface)
         header.pack(fill="x", padx=20, pady=(16, 8))
         self.ui.label(header, f"Vueltas ({len(self.app.stopwatch.laps)})", 13, "bold").pack(side="left")
-        self.ui.label(header, "Recorrido hacia atrás (prev): la más reciente primero", 10,
+        self.ui.label(header, "Recorrido hacia atrás: la más reciente primero", 10,
                       color=self.theme.muted).pack(side="right")
         if self.app.stopwatch.laps.is_empty():
             self.ui.label(self.laps_card, "Presiona «Vuelta» mientras el cronómetro corre.", 12,
                           color=self.theme.muted).pack(pady=30)
             return
         fastest, slowest = self.app.stopwatch.extremes()
-        for index, node in enumerate(self.app.stopwatch.laps.nodes_backward()):
+        for index, mark in enumerate(self.app.stopwatch.laps.marks_backward()):
             if index >= 8:
                 break
-            lap = node.data
+            lap = mark.value
             row = self.ui.frame(self.laps_card, self.theme.surface_alt)
             row.pack(fill="x", padx=20, pady=3)
             tag, color = "", self.theme.text
@@ -1082,7 +1086,7 @@ class StopwatchView(View):
 
 class TimerView(View):
     title = "Temporizador"
-    subtitle = "Cuenta regresiva recorriendo las listas hacia atrás (prev)"
+    subtitle = "Cuenta regresiva recorriendo los diales hacia atrás"
 
     def build(self):
         body = self.ui.frame(self.parent)
@@ -1159,8 +1163,8 @@ class TimerView(View):
         timer = self.app.timer
         if timer.running:
             self.toggle_button.configure(text="Pausar")
-            self.message.configure(text="Cada segundo el cursor de segundos se mueve al nodo anterior (prev). "
-                                        "Al pasar de 00 a 59, el de minutos también retrocede.",
+            self.message.configure(text="Cada segundo la manecilla de segundos retrocede al nodo anterior. "
+                                        "Al pasar de 00 a 59, la de minutos también retrocede.",
                                    fg=self.theme.muted)
         else:
             paused = not timer.is_zero() and timer.remaining() != timer.total
@@ -1190,10 +1194,10 @@ class TimerView(View):
         canvas.create_text(center, center + 40, text=state, fill=self.theme.muted, font=Fonts.ui(11, "bold"))
 
 
-class RingDescriptor:
-    def __init__(self, name, cursor, explanation):
+class DialDescriptor:
+    def __init__(self, name, hand, explanation):
         self.name = name
-        self.cursor = cursor
+        self.hand = hand
         self.explanation = explanation
 
 
@@ -1203,15 +1207,15 @@ class StructureView(View):
 
     def build(self):
         mechanism = self.app.mechanism
-        if self.app.structure_rings is None:
-            self.app.structure_rings = RingCursor(RingFactory.items([
-                RingDescriptor("Segundos", mechanism.seconds,
-                               "Cada segundo el cursor pasa al nodo siguiente (next). Cuando llega de 59 al head "
+        if self.app.structure_dials is None:
+            self.app.structure_dials = DialHand(DialFactory.items([
+                DialDescriptor("Segundos", mechanism.seconds,
+                               "Cada segundo la manecilla pasa al nodo siguiente. Cuando llega de 59 al origen "
                                "(00), la lista de minutos avanza un nodo."),
-                RingDescriptor("Minutos", mechanism.minutes,
+                DialDescriptor("Minutos", mechanism.minutes,
                                "Avanza un nodo cada vez que la lista de segundos completa una vuelta. Al volver "
-                               "al head, avanza la lista de horas."),
-                RingDescriptor("Horas", mechanism.hours,
+                               "al origen, avanza la lista de horas."),
+                DialDescriptor("Horas", mechanism.hours,
                                "24 nodos enlazados en círculo: del nodo 23 se vuelve al 00 sin necesidad de "
                                "reiniciar nada, porque el último nodo apunta al primero."),
             ]))
@@ -1221,10 +1225,10 @@ class StructureView(View):
         left.pack(side="left", fill="both", expand=True, padx=(0, 14))
         selector = self.ui.frame(left, self.theme.surface)
         selector.pack(fill="x", padx=16, pady=(14, 0))
-        self.ui.button(selector, "◀", self.previous_ring, "secondary", 11, 12, 4).pack(side="left")
-        self.ring_title = self.ui.label(selector, "", 13, "bold")
-        self.ring_title.pack(side="left", expand=True)
-        self.ui.button(selector, "▶", self.next_ring, "secondary", 11, 12, 4).pack(side="right")
+        self.ui.button(selector, "◀", self.previous_dial, "secondary", 11, 12, 4).pack(side="left")
+        self.dial_title = self.ui.label(selector, "", 13, "bold")
+        self.dial_title.pack(side="left", expand=True)
+        self.ui.button(selector, "▶", self.next_dial, "secondary", 11, 12, 4).pack(side="right")
         self.canvas = self.ui.canvas(left, 470, 470)
         self.canvas.pack(expand=True, padx=12, pady=8)
         right = self.ui.card(body)
@@ -1233,7 +1237,7 @@ class StructureView(View):
         self.detail = self.ui.canvas(right, 340, 120)
         self.detail.pack(padx=20)
         self.facts = []
-        for caption in ("Tamaño de la lista", "Nodo head", "Nodo actual", "Anterior (prev)", "Siguiente (next)",
+        for caption in ("Tamaño de la lista", "Nodo origen", "Nodo actual", "Anterior", "Siguiente",
                         "Pasos recorridos"):
             row = self.ui.frame(right, self.theme.surface)
             row.pack(fill="x", padx=20, pady=2)
@@ -1246,14 +1250,14 @@ class StructureView(View):
 
     @property
     def descriptor(self):
-        return self.app.structure_rings.value
+        return self.app.structure_dials.value
 
-    def previous_ring(self):
-        self.app.structure_rings.backward()
+    def previous_dial(self):
+        self.app.structure_dials.retreat()
         self.redraw()
 
-    def next_ring(self):
-        self.app.structure_rings.forward()
+    def next_dial(self):
+        self.app.structure_dials.advance()
         self.redraw()
 
     def redraw(self):
@@ -1261,54 +1265,54 @@ class StructureView(View):
 
     def on_second(self, moment):
         descriptor = self.descriptor
-        cursor = descriptor.cursor
-        ring = cursor.ring
-        node = cursor.node
-        self.ring_title.configure(text=f"Lista de {descriptor.name.lower()}")
-        values = [f"{len(ring)} nodos", f"{ring.head.data:02d}", f"{node.data:02d}", f"{node.prev.data:02d}",
-                  f"{node.next.data:02d}", f"{cursor.steps}"]
+        hand = descriptor.hand
+        dial = hand.dial
+        mark = hand.mark
+        self.dial_title.configure(text=f"Lista de {descriptor.name.lower()}")
+        values = [f"{len(dial)} nodos", f"{dial.origin.value:02d}", f"{mark.value:02d}", f"{mark.before.value:02d}",
+                  f"{mark.after.value:02d}", f"{hand.steps}"]
         for label, value in zip(self.facts, values):
             label.configure(text=value)
         self.explanation.configure(text=descriptor.explanation)
-        self.draw_ring(ring, node)
-        self.draw_detail(node)
+        self.draw_dial(dial, mark)
+        self.draw_detail(mark)
 
-    def draw_ring(self, ring, current):
+    def draw_dial(self, dial, current):
         canvas = self.canvas
         canvas.delete("all")
         center, radius = 235, 195
-        count = len(ring)
+        count = len(dial)
         positions = {}
-        for index, node in enumerate(ring.nodes()):
-            positions[id(node)] = Trigonometry.point(center, center, radius, index / count)
-        nodes = list(ring.nodes())
-        for node in nodes:
-            x1, y1 = positions[id(node)]
-            x2, y2 = positions[id(node.next)]
+        for index, mark in enumerate(dial.marks()):
+            positions[id(mark)] = Trigonometry.point(center, center, radius, index / count)
+        marks = list(dial.marks())
+        for mark in marks:
+            x1, y1 = positions[id(mark)]
+            x2, y2 = positions[id(mark.after)]
             canvas.create_line(x1, y1, x2, y2, fill=self.theme.border, width=2)
         size = 9 if count > 30 else 14
-        for node in nodes:
-            x, y = positions[id(node)]
+        for mark in marks:
+            x, y = positions[id(mark)]
             fill, outline, text_color = self.theme.surface_alt, self.theme.border, self.theme.muted
             scale = 1.0
-            if node is current:
+            if mark is current:
                 fill, outline, text_color, scale = self.theme.accent, self.theme.accent, "#ffffff", 1.6
-            elif node is current.prev:
+            elif mark is current.before:
                 fill, outline, text_color, scale = self.theme.accent_alt, self.theme.accent_alt, "#ffffff", 1.2
-            elif node is current.next:
+            elif mark is current.after:
                 fill, outline, text_color, scale = self.theme.success, self.theme.success, "#ffffff", 1.2
-            if node is ring.head:
+            if mark is dial.origin:
                 outline = self.theme.second_hand
-            radius_node = size * scale
-            canvas.create_oval(x - radius_node, y - radius_node, x + radius_node, y + radius_node,
+            mark_radius = size * scale
+            canvas.create_oval(x - mark_radius, y - mark_radius, x + mark_radius, y + mark_radius,
                                fill=fill, outline=outline, width=2)
-            show_text = count <= 30 or node.data % 5 == 0 or node is current or node is current.prev or node is current.next
+            show_text = count <= 30 or mark.value % 5 == 0 or mark is current or mark is current.before or mark is current.after
             if show_text:
-                canvas.create_text(x, y, text=f"{node.data:02d}", fill=text_color,
+                canvas.create_text(x, y, text=f"{mark.value:02d}", fill=text_color,
                                    font=Fonts.ui(8 if scale == 1.0 else 9, "bold"))
-        hx, hy = positions[id(ring.head)]
-        canvas.create_text(hx, hy - 30, text="head", fill=self.theme.second_hand, font=Fonts.ui(10, "bold"))
-        canvas.create_text(center, center - 30, text=f"{current.data:02d}", fill=self.theme.text,
+        hx, hy = positions[id(dial.origin)]
+        canvas.create_text(hx, hy - 30, text="origen", fill=self.theme.second_hand, font=Fonts.ui(10, "bold"))
+        canvas.create_text(center, center - 30, text=f"{current.value:02d}", fill=self.theme.text,
                            font=Fonts.digits(54))
         canvas.create_text(center, center + 25, text="nodo actual", fill=self.theme.muted, font=Fonts.ui(11))
         legend = ((self.theme.accent_alt, "anterior"), (self.theme.accent, "actual"), (self.theme.success, "siguiente"))
@@ -1318,10 +1322,10 @@ class StructureView(View):
             canvas.create_text(x + 10, center + 67, text=caption, anchor="w", fill=self.theme.muted,
                                font=Fonts.ui(9))
 
-    def draw_detail(self, node):
+    def draw_detail(self, mark):
         canvas = self.detail
         canvas.delete("all")
-        boxes = ((node.prev, self.theme.accent_alt), (node, self.theme.accent), (node.next, self.theme.success))
+        boxes = ((mark.before, self.theme.accent_alt), (mark, self.theme.accent), (mark.after, self.theme.success))
         width, height, gap, top = 92, 46, 32, 38
         for index, (item, color) in enumerate(boxes):
             left = index * (width + gap)
@@ -1331,11 +1335,11 @@ class StructureView(View):
             canvas.create_line(left + third, top, left + third, top + height, fill=color)
             canvas.create_line(left + 2 * third, top, left + 2 * third, top + height, fill=color)
             canvas.create_text(left + third / 2, top + height / 2, text="•", fill=self.theme.text, font=Fonts.ui(12))
-            canvas.create_text(left + width / 2, top + height / 2, text=f"{item.data:02d}", fill=self.theme.text,
+            canvas.create_text(left + width / 2, top + height / 2, text=f"{item.value:02d}", fill=self.theme.text,
                                font=Fonts.ui(11, "bold"))
             canvas.create_text(left + width - third / 2, top + height / 2, text="•", fill=self.theme.text,
                                font=Fonts.ui(12))
-            caption = ("prev", "data", "next")
+            caption = ("ant.", "valor", "sig.")
             canvas.create_text(left + width / 2, top - 14, text=("anterior", "actual", "siguiente")[index],
                                fill=color, font=Fonts.ui(9, "bold"))
             for part in range(3):
@@ -1363,8 +1367,8 @@ class ClockApp:
         self.alarms = AlarmManager(bridge.script_folder() + "/alarmas.txt")
         self.stopwatch = Stopwatch(self.provider)
         self.timer = CountdownTimer(self.provider)
-        self.views = RingCursor(RingFactory.items(self.VIEWS))
-        self.structure_rings = None
+        self.views = DialHand(DialFactory.items(self.VIEWS))
+        self.structure_dials = None
         self.widgets = Widgets(self)
         self.view = None
         self.popups = []
@@ -1414,15 +1418,15 @@ class ClockApp:
         ui.label(texts, "Reloj Circular", 14, "bold").pack(anchor="w")
         ui.label(texts, "Hecho 100% en Python", 9, color=theme.muted).pack(anchor="w")
         self.nav_items = []
-        for node in self.views.ring.nodes():
-            name, icon, _ = node.data
-            selected = node is self.views.node
+        for mark in self.views.dial.marks():
+            name, icon, _ = mark.value
+            selected = mark is self.views.mark
             background = theme.accent if selected else theme.surface
             foreground = "#ffffff" if selected else theme.text
             item = self.tk.Label(sidebar, text=f"  {icon}   {name}", anchor="w", font=Fonts.ui(12, "bold"),
                                  bg=background, fg=foreground, padx=14, pady=10, cursor="hand2")
             item.pack(fill="x", padx=14, pady=2)
-            item.bind("<Button-1>", lambda event, target=node: self.show_view(target))
+            item.bind("<Button-1>", lambda event, target=mark: self.show_view(target))
             if not selected:
                 item.bind("<Enter>", lambda event, widget=item: widget.configure(bg=theme.surface_alt))
                 item.bind("<Leave>", lambda event, widget=item: widget.configure(bg=theme.surface))
@@ -1465,24 +1469,24 @@ class ClockApp:
         self.view = view_class(self, content)
         self.last_second = None
 
-    def show_view(self, node):
-        self.views.node = node
+    def show_view(self, mark):
+        self.views.mark = mark
         self.build()
 
     def next_view(self):
-        self.views.forward()
+        self.views.advance()
         self.build()
 
     def previous_view(self):
-        self.views.backward()
+        self.views.retreat()
         self.build()
 
     def next_theme(self):
-        self.themes.next()
+        self.themes.following()
         self.build()
 
     def previous_theme(self):
-        self.themes.previous()
+        self.themes.preceding()
         self.build()
 
     def set_format(self, use_24h):
@@ -1526,10 +1530,10 @@ class ClockApp:
             if isinstance(self.view, (AlarmView, ClockView)):
                 self.build()
 
-        def ring():
+        def chime():
             if state["open"]:
                 self.root.bell()
-                self.root.after(1200, ring)
+                self.root.after(1200, chime)
 
         ui.button(buttons, "Detener", close, "primary").pack(side="left", padx=6)
         if snooze_alarm is not None:
@@ -1539,7 +1543,7 @@ class ClockApp:
         x = self.root.winfo_rootx() + (self.root.winfo_width() - popup.winfo_width()) // 2
         y = self.root.winfo_rooty() + (self.root.winfo_height() - popup.winfo_height()) // 3
         popup.geometry(f"+{max(0, x)}+{max(0, y)}")
-        ring()
+        chime()
 
     def loop(self):
         moment = self.provider.now()
