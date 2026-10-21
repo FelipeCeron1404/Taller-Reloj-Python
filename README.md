@@ -46,7 +46,7 @@ Las clases llevan nombres del caso de estudio, el reloj:
 | Mecanismo del reloj | Tres diales: horas (24 marcas), minutos (60) y segundos (60). Cada segundo la manecilla avanza a la marca siguiente (`after`). Cuando el dial de segundos vuelve al `origin`, avanza el de minutos, y luego el de horas |
 | Temporizador | Cuenta regresiva: las manecillas retroceden con `before`. Al pasar de 00 a 59 se "presta" un minuto |
 | Relojes del mundo | 12 ciudades en una lista circular. Con anterior y siguiente se navega sin fin |
-| Alarmas | Cada alarma es un nodo insertado en orden por hora. Se eliminan con `delete` y se guardan en `alarmas.txt` |
+| Alarmas | Cada alarma es un nodo insertado en orden por hora. Se eliminan con `remove` y se guardan en `alarmas.txt` |
 | Cronómetro | Cada vuelta se inserta al final. Se muestran recorriendo hacia atrás, de la más reciente a la más antigua |
 | Temas y menú | Los temas de color y las secciones del menú también son listas circulares (Ctrl + ← / → y Ctrl + T) |
 | Visor de estructura | Dibuja en vivo las marcas del dial, el `origin`, la marca actual y sus enlaces `before` y `after` |
