@@ -710,8 +710,15 @@ class Widgets:
                                  highlightbackground=self.theme.border, highlightcolor=self.theme.accent)
         return widget, variable
 
+    def fit(self, canvas):
+        factor = self.app.factor
+        if factor != 1.0:
+            canvas.scale("all", 0, 0, factor, factor)
+
     def canvas(self, parent, width, height, background=None):
-        return self.tk.Canvas(parent, width=width, height=height, bg=background or self.theme.surface,
+        factor = self.app.factor
+        return self.tk.Canvas(parent, width=int(width * factor), height=int(height * factor),
+                              bg=background or self.theme.surface,
                               highlightthickness=0)
 
 
@@ -804,6 +811,7 @@ class ClockView(View):
         hour, minute, second = self.app.mechanism.state()
         smooth = fraction if self.app.settings.smooth_seconds else 0.0
         ClockPainter.draw(self.canvas, 230, 230, 200, hour, minute, second, self.theme, smooth)
+        self.ui.fit(self.canvas)
 
 
 class WorldView(View):
@@ -902,6 +910,7 @@ class WorldView(View):
         self.canvas.delete("all")
         ClockPainter.draw(self.canvas, 90, 90, 72, local.tm_hour, local.tm_min, local.tm_sec, self.theme,
                           fraction if self.app.settings.smooth_seconds else 0.0)
+        self.ui.fit(self.canvas)
 
 
 class AlarmView(View):
@@ -1192,6 +1201,7 @@ class TimerView(View):
         canvas.create_text(center, center - 10, text=timer.text(), fill=self.theme.text, font=Fonts.digits(48))
         state = "EN MARCHA" if timer.running else ("TERMINADO" if timer.is_zero() else "EN PAUSA")
         canvas.create_text(center, center + 40, text=state, fill=self.theme.muted, font=Fonts.ui(11, "bold"))
+        self.ui.fit(canvas)
 
 
 class DialDescriptor:
@@ -1321,6 +1331,7 @@ class StructureView(View):
             canvas.create_oval(x - 5, center + 62, x + 5, center + 72, fill=color, outline="")
             canvas.create_text(x + 10, center + 67, text=caption, anchor="w", fill=self.theme.muted,
                                font=Fonts.ui(9))
+        self.ui.fit(canvas)
 
     def draw_detail(self, mark):
         canvas = self.detail
@@ -1349,6 +1360,7 @@ class StructureView(View):
                 start = left + width
                 canvas.create_line(start + 2, top + 15, start + gap - 2, top + 15, fill=self.theme.text, arrow="last")
                 canvas.create_line(start + gap - 2, top + 31, start + 2, top + 31, fill=self.theme.text, arrow="last")
+        self.ui.fit(canvas)
 
 
 class ClockApp:
@@ -1377,16 +1389,33 @@ class ClockApp:
         self.loop_id = None
         moment = self.provider.now()
         self.mechanism.sync(moment.tm_hour, moment.tm_min, moment.tm_sec)
+        self.factor = 1.0
         self.root = self.tk.Tk()
+        self.factor = max(1.0, self.root.winfo_fpixels("1i") / 96)
         self.root.title("Reloj Circular · Listas Circulares Dobles")
-        self.root.geometry("1220x760")
-        self.root.minsize(1120, 720)
+        self.size_window()
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.root.bind("<Control-Right>", lambda event: self.next_view())
         self.root.bind("<Control-Left>", lambda event: self.previous_view())
         self.root.bind("<Control-t>", lambda event: self.next_theme())
         self.build()
         self.loop()
+
+    def size_window(self):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        width = int(1220 * self.factor)
+        height = int(760 * self.factor)
+        self.root.minsize(min(int(1120 * self.factor), screen_width), min(int(700 * self.factor), screen_height - 60))
+        if width > screen_width * 0.96 or height > screen_height * 0.9:
+            try:
+                self.root.state("zoomed")
+            except self.tk.TclError:
+                self.root.geometry(f"{screen_width}x{screen_height - 60}+0+0")
+        else:
+            left = (screen_width - width) // 2
+            top = max(0, (screen_height - height) // 2 - 20)
+            self.root.geometry(f"{width}x{height}+{left}+{top}")
 
     def shade(self, color, amount):
         color = color.lstrip("#")
@@ -1405,7 +1434,7 @@ class ClockApp:
         theme = self.themes.current
         self.root.configure(bg=theme.background)
         ui = self.widgets
-        sidebar = ui.frame(self.root, theme.surface, width=262)
+        sidebar = ui.frame(self.root, theme.surface, width=int(262 * self.factor))
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
         brand = ui.frame(sidebar, theme.surface)
@@ -1413,6 +1442,7 @@ class ClockApp:
         logo = ui.canvas(brand, 44, 44, theme.surface)
         logo.pack(side="left")
         ClockPainter.draw(logo, 22, 22, 16, 10, 10, 30, theme, compact=True)
+        ui.fit(logo)
         texts = ui.frame(brand, theme.surface)
         texts.pack(side="left", padx=10)
         ui.label(texts, "Reloj Circular", 14, "bold").pack(anchor="w")
