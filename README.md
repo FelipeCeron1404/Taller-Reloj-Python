@@ -30,12 +30,21 @@ Al arrancar, Python carga su propio sistema de módulos antes de ejecutar el pro
 
 ## La lista circular doble en el proyecto
 
-La clase `CircularDoublyLinkedList` sigue la estructura vista en clase: `Node` con `data`, `prev` y `next`, `insert_at_beginning`, `insert_at_end` y `delete`. Sobre ella, `RingCursor` recorre la lista hacia adelante (`next`) y hacia atrás (`prev`).
+Las clases llevan nombres del caso de estudio, el reloj:
+
+| Concepto visto en clase | Clase o atributo en el reloj |
+|---|---|
+| Nodo (`Node`) | `DialMark`: una marca de la carátula, con `value` |
+| Puntero al nodo anterior y al siguiente | `before` y `after` |
+| Lista circular doble | `Dial`: la carátula completa |
+| Primer nodo (`head`) | `origin`: la marca de origen, el 00 |
+| Insertar al inicio y al final, eliminar | `place_first`, `place_last`, `place_before` y `remove` |
+| Recorrer adelante y atrás | `DialHand`: la manecilla, con `advance` y `retreat` |
 
 | Parte del reloj | Uso de la lista circular doble |
 |---|---|
-| Mecanismo del reloj | Tres listas: horas (24 nodos), minutos (60) y segundos (60). Cada segundo el cursor pasa al nodo `next`. Cuando la lista de segundos vuelve al `head`, avanza la de minutos, y luego la de horas |
-| Temporizador | Cuenta regresiva recorriendo las listas con `prev`. Al pasar de 00 a 59 se "presta" un minuto |
+| Mecanismo del reloj | Tres diales: horas (24 marcas), minutos (60) y segundos (60). Cada segundo la manecilla avanza a la marca siguiente (`after`). Cuando el dial de segundos vuelve al `origin`, avanza el de minutos, y luego el de horas |
+| Temporizador | Cuenta regresiva: las manecillas retroceden con `before`. Al pasar de 00 a 59 se "presta" un minuto |
 | Relojes del mundo | 12 ciudades en una lista circular. Con anterior y siguiente se navega sin fin |
 | Alarmas | Cada alarma es un nodo insertado en orden por hora. Se eliminan con `delete` y se guardan en `alarmas.txt` |
 | Cronómetro | Cada vuelta se inserta al final. Se muestran recorriendo hacia atrás, de la más reciente a la más antigua |
