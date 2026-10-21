@@ -49,7 +49,7 @@ Las clases llevan nombres del caso de estudio, el reloj:
 | Alarmas | Cada alarma es un nodo insertado en orden por hora. Se eliminan con `delete` y se guardan en `alarmas.txt` |
 | Cronómetro | Cada vuelta se inserta al final. Se muestran recorriendo hacia atrás, de la más reciente a la más antigua |
 | Temas y menú | Los temas de color y las secciones del menú también son listas circulares (Ctrl + ← / → y Ctrl + T) |
-| Visor de estructura | Dibuja en vivo los nodos, el `head`, el nodo actual y sus punteros `prev` y `next` |
+| Visor de estructura | Dibuja en vivo las marcas del dial, el `origin`, la marca actual y sus enlaces `before` y `after` |
 
 ## Funcionalidades
 
